@@ -1,0 +1,92 @@
+USE tstdatabasefinal;
+-- BOOK table
+CREATE TABLE BOOK (
+  ISBN VARCHAR(13) PRIMARY KEY,
+  Title VARCHAR(255) NOT NULL,
+  Author VARCHAR(255) NOT NULL CHECK (Author LIKE '% %'),
+  Genre VARCHAR(50),
+  Price DECIMAL(13,2) NOT NULL,
+  Publishing_Date DATE NOT NULL
+);
+
+-- CUSTOMER table
+CREATE TABLE CUSTOMER (
+  Customer_ID VARCHAR(9) PRIMARY KEY,
+  Fname VARCHAR(50) NOT NULL,
+  Lname VARCHAR(50) NOT NULL,
+  Email VARCHAR(255) NOT NULL UNIQUE CHECK (Email LIKE '%@%'),
+  Phone_Number CHAR(12) NOT NULL UNIQUE CHECK (Phone_Number LIKE '___-___-____' AND Phone_Number NOT LIKE '%[^0-9-]%')
+);
+
+-- SHOPPING_CART table
+CREATE TABLE SHOPPING_CART (
+  Cart_ID VARCHAR(9) PRIMARY KEY,
+  Cart_Total DECIMAL(13,2) NOT NULL DEFAULT 0.00,
+  Total_Products INT DEFAULT 0,
+  CHECK ((Total_Products > 0 AND Cart_Total > 0) OR (Total_Products = 0 AND Cart_Total = 0))
+  );
+  
+-- PAYMENT table
+CREATE TABLE PAYMENT (
+  Card_Number VARCHAR(16) PRIMARY KEY,
+  CVV INT CHECK (CVV BETWEEN 100 AND 9999),
+  Card_Type VARCHAR(15) NOT NULL CHECK (Card_Type IN ('Visa', 'Mastercard', 'AmericanExpress', 'Discover')),
+  Expiration_Date CHAR(5) NOT NULL CHECK (
+    SUBSTRING(Expiration_Date, 1, 2) BETWEEN '01' AND '12' AND
+    SUBSTRING(Expiration_Date, 4, 2) >= '23'
+  ),
+  Customer_ID VARCHAR(9) NOT NULL,
+  FOREIGN KEY (Customer_ID) REFERENCES CUSTOMER(Customer_ID)
+);
+
+-- ORDERS table
+CREATE TABLE ORDERS (
+  Order_ID VARCHAR(9) PRIMARY KEY,
+  Order_Date DATE NOT NULL,
+  Total_Amount DECIMAL(13,2) NOT NULL,
+  Cart_ID VARCHAR(9) NOT NULL,
+  Card_Number VARCHAR(16) NOT NULL,
+  CHECK (Total_Amount >= 0),
+  FOREIGN KEY (Cart_ID) REFERENCES SHOPPING_CART(Cart_ID),
+  FOREIGN KEY (Card_Number) REFERENCES PAYMENT(Card_Number)
+);
+
+-- LINE_ITEM table
+CREATE TABLE LINE_ITEM ( 
+  LineItem_ID VARCHAR(9) NOT NULL,
+  ISBN VARCHAR(13),
+  Cart_ID VARCHAR(9),
+  Quantity INT CHECK (Quantity BETWEEN 1 AND 100) DEFAULT 1,
+  PRIMARY KEY (LineItem_ID, ISBN, Cart_ID),
+  FOREIGN KEY (ISBN) REFERENCES BOOK(ISBN),
+  FOREIGN KEY (Cart_ID) REFERENCES SHOPPING_CART(Cart_ID)
+);
+
+-- SHIPPING_DETAILS table
+CREATE TABLE SHIPPING_DETAILS (
+  Shipping_ID VARCHAR(9) PRIMARY KEY,
+  Order_ID VARCHAR(9) NOT NULL,
+  Address VARCHAR(255) NOT NULL,
+  Delivery_Status BOOLEAN NOT NULL DEFAULT false,
+  FOREIGN KEY (Order_ID) REFERENCES ORDERS(Order_ID)
+);
+
+-- CONTAINS table (junction table for many-to-many relationship)
+CREATE TABLE CONTAINS (
+  Cart_ID VARCHAR(9),
+  ISBN VARCHAR(13),
+  PRIMARY KEY (Cart_ID, ISBN),
+  FOREIGN KEY (Cart_ID) REFERENCES SHOPPING_CART(Cart_ID),
+  FOREIGN KEY (ISBN) REFERENCES BOOK(ISBN)
+);
+
+-- PAYS_FOR table (junction table for many-to-many relationship)
+CREATE TABLE PAYS_FOR (
+  Card_Number VARCHAR(16),
+  Order_ID VARCHAR(9),
+  PRIMARY KEY (Card_Number, Order_ID),
+  FOREIGN KEY (Card_Number) REFERENCES PAYMENT(Card_Number),
+  FOREIGN KEY (Order_ID) REFERENCES ORDERS(Order_ID)
+);
+
+
